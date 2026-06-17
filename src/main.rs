@@ -1,7 +1,5 @@
 use std::{fs::read_to_string, iter::Peekable, str::Chars};
 
-use crate::Token::StringLiteral;
-
 fn main() {
     let data = read_to_string("./main.el").unwrap();
     println!("{:?}", tokenize(&data));
@@ -33,46 +31,63 @@ fn tokenize(src: &str) -> Vec<Token> {
             continue;
         }
 
-        if ch == '=' {
-            tokens.push(Token::Equal);
+        if let Some(operator) = read_operators(&mut chars) {
+            tokens.push(operator);
             chars.next();
             continue;
         }
 
         if ch == '"' {
-            tokens.push(read_string(&mut chars))
+            tokens.push(read_string(&mut chars));
+            continue;
         }
 
         if ch.is_ascii_digit() {
-            //println!("{}", ch);
             tokens.push(read_number(&mut chars));
+            continue;
         }
 
         if ch.is_alphabetic() {
-            let mut word = String::new();
-            word.push(ch);
-            chars.next();
-            
-            while let Some(next_char) = chars.next() {
-                if next_char.is_alphanumeric() {
-                    word.push(next_char);
-                } else {
-                    break;
-                }
-            }
-
-            match word.as_str() {
-                // reserved words
-                "let" => tokens.push(Token::Variable),
-                "while" => tokens.push(Token::While),
-                "for" => tokens.push(Token::For),
-                "switch" => tokens.push(Token::Switch),
-                _ => tokens.push(Token::Identifier(word)),
-            }
+            tokens.push(read_identifier(&mut chars));
+            continue;
         }
     }
 
     tokens
+}
+
+fn read_operators(chars: &mut Peekable<Chars<'_>>) -> Option<Token> {
+    let next_char = chars.peek().unwrap();
+    match *next_char {
+        '-' => Some(Token::Minus),
+        '+' => Some(Token::Plus),
+        '*' => Some(Token::Multiply),
+        '/' => Some(Token::Divide),
+        '=' => Some(Token::Equal),
+        _ => None,
+    }
+}
+
+fn read_identifier(chars: &mut Peekable<Chars<'_>>) -> Token {
+    let mut word = String::new();
+    
+    while let Some(&next_char) = chars.peek() {
+        if next_char.is_alphanumeric() {
+            word.push(next_char);
+            chars.next();
+        } else {
+            break;
+        }
+    }
+
+    match word.as_str() {
+        // reserved words
+        "let" => Token::Variable,
+        "while" => Token::While,
+        "for" => Token::For,
+        "switch" => Token::Switch,
+        _ => Token::Identifier(word),
+    }
 }
 
 fn read_string(chars: &mut Peekable<Chars<'_>>) -> Token {
@@ -105,16 +120,9 @@ fn read_string(chars: &mut Peekable<Chars<'_>>) -> Token {
 
 fn read_number(chars: &mut Peekable<Chars<'_>>) -> Token {
     let mut value: i32 = 0;
-    let mut sign = 1;
 
     while let Some(&next_char) = chars.peek() {
-        //println!("{}", next_char);
-        if next_char == '-' {
-            sign = -1;
-            chars.next();
-            continue;
-        }
-        else if next_char.is_ascii_digit() {
+        if next_char.is_ascii_digit() {
             value = value * 10 + (next_char as i32 - '0' as i32);
             chars.next();
         } else {
@@ -122,5 +130,5 @@ fn read_number(chars: &mut Peekable<Chars<'_>>) -> Token {
         }
     }
 
-    return Token::NumberLiteral(value * sign);
+    return Token::NumberLiteral(value);
 }

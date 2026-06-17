@@ -1,2 +1,2 @@
 let nazwa = "test+elo"
-let liczba = 5
+let liczba = 4
