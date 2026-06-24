@@ -1,0 +1,164 @@
+use std::{iter::Peekable, str::Chars};
+
+#[derive(Debug)]
+pub enum Token {
+    // operator tokens
+    Equal,
+    Plus,
+    Minus,
+    Divide,
+    Multiply,
+    // Identifier token
+    Identifier(String),
+    // reserved word tokens
+    While,
+    For,
+    Variable,
+    Switch,
+    // literal tokens
+    StringLiteral(String),
+    NumberLiteral(i32),
+    BoolLiteral(bool),
+    // code block tokens
+    OpenBrace,
+    CloseBrace,
+    OpenParenthesis,
+    CloseParenthesis,
+    Comma
+}
+
+
+pub fn tokenize(src: &str) -> Vec<Token> {
+    let mut chars = src.chars().peekable();
+    let mut tokens = Vec::new();
+
+    while let Some(&ch) = chars.peek() {
+        if ch.is_whitespace() {
+            chars.next();
+            continue;
+        }
+
+        if let Some(operator) = read_operators(&mut chars) {
+            tokens.push(operator);
+            chars.next();
+            continue;
+        }
+
+        if let Some(code_block) = read_code_blocks(&mut chars) {
+            tokens.push(code_block);
+            chars.next();
+            continue;
+        }
+
+        if ch == '"' {
+            tokens.push(read_string(&mut chars));
+            continue;
+        }
+
+        if ch.is_ascii_digit() {
+            tokens.push(read_number(&mut chars));
+            continue;
+        }
+
+        if ch.is_alphabetic() {
+            tokens.push(read_identifier(&mut chars));
+            continue;
+        }
+
+        println!("Got error: Invalid char: '{}'", ch);
+        chars.next();
+    }
+
+    tokens
+}
+
+fn read_code_blocks(chars: &mut Peekable<Chars<'_>>) -> Option<Token> {
+    let next_char = chars.peek().unwrap();
+    match *next_char {
+        '(' => Some(Token::OpenParenthesis),
+        ')' => Some(Token::CloseParenthesis),
+        '{' => Some(Token::OpenBrace),
+        '}' => Some(Token::CloseBrace),
+        ',' => Some(Token::Comma),
+        _ => None,
+    }
+}
+
+fn read_operators(chars: &mut Peekable<Chars<'_>>) -> Option<Token> {
+    let next_char = chars.peek().unwrap();
+    match *next_char {
+        '-' => Some(Token::Minus),
+        '+' => Some(Token::Plus),
+        '*' => Some(Token::Multiply),
+        '/' => Some(Token::Divide),
+        '=' => Some(Token::Equal),
+        _ => None,
+    }
+}
+
+fn read_identifier(chars: &mut Peekable<Chars<'_>>) -> Token {
+    let mut word = String::new();
+    
+    while let Some(&next_char) = chars.peek() {
+        if next_char.is_alphanumeric() {
+            word.push(next_char);
+            chars.next();
+        } else {
+            break;
+        }
+    }
+
+    match word.as_str() {
+        // reserved words
+        "let" => Token::Variable,
+        "while" => Token::While,
+        "for" => Token::For,
+        "switch" => Token::Switch,
+        "true" => Token::BoolLiteral(true),
+        "false" => Token::BoolLiteral(false),
+        _ => Token::Identifier(word),
+    }
+}
+
+fn read_string(chars: &mut Peekable<Chars<'_>>) -> Token {
+    let mut value = String::new();
+    chars.next();
+
+    while let Some(&next_char) = chars.peek() {
+        if next_char == '"' {
+            chars.next();
+            break;
+        }
+        value.push(next_char);
+        chars.next();
+    }
+
+    return Token::StringLiteral(value);
+}
+
+// TODO: add types for number to optimalize language but not for now.
+/*enum NumberType {
+    UnsignedInt64,
+    UnsignedInt32,
+    UnsignedInt16,
+    UnsignedInt8,
+    Int64,
+    Int32,
+    Int16,
+    Int8
+}*/
+
+fn read_number(chars: &mut Peekable<Chars<'_>>) -> Token {
+    let mut value: i32 = 0;
+
+    while let Some(&next_char) = chars.peek() {
+        if next_char.is_ascii_digit() {
+            value = value * 10 + (next_char as i32 - '0' as i32);
+            chars.next();
+        } else {
+            break;
+        }
+    }
+
+    return Token::NumberLiteral(value);
+}
