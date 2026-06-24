@@ -1,7 +1,12 @@
 use std::fs::read_to_string;
-mod tokenizer;
+pub mod tokenizer;
+pub mod parser;
+
+use crate::{parser::Parser, tokenizer::tokenize};
 
 fn main() {
-    let data = read_to_string("./main.el").unwrap();
-    println!("{:?}", tokenizer::tokenize(&data));
+    let tokens = read_to_string("./main.el").unwrap();
+    let mut parser = Parser::new(tokenize(&tokens));
+
+    println!("{:?}", parser.parse());
 }
